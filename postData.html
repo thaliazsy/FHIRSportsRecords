@@ -1,0 +1,158 @@
+﻿﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Post Sport Record - Average Activity Heart Rate Record</title>
+
+    <script src="setting.js"></script>
+    <script src="Cookie.js"></script>
+    <script src="dateTime.js"></script>
+    <script src="HTTP2024.js"></script>
+
+    <script>
+        var jsonObj = {
+            "resourceType": "Observation",
+            "status": "final",
+            "category": [
+                {
+                    "coding": [
+                        {
+                            "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                            "code": "activity"
+                        }
+                    ]
+                },
+                {
+                    "coding": [
+                        {
+                            "system": "http://hl7.org/fhir/us/physical-activity/CodeSystem/pa-temporary-codes",
+                            "code": "PhysicalActivity"
+                        }
+                    ]
+                }
+            ],
+            "code": {
+                "coding": [
+                    {
+                        "system": "http://loinc.org",
+                        "code": "55425-3",
+                        "display": "Heart rate unspecified time mean by Pedometer"
+                    }
+                ]
+            },
+            "subject": {
+                "reference": "",
+                "display": ""
+            },
+            "effectiveDateTime": getFormattedTime(),
+            "performer": [
+                {
+                    "reference": "",
+                    "display": ""
+                }
+            ],
+            "valueQuantity": {
+                "value": 0,
+                "unit": "beats per minute",
+                "system": "http://unitsofmeasure.org",
+                "code": "/min"
+            }
+        };
+
+        function validateInput() {
+            var patientID = document.getElementById("patientID").value;
+            var activityName = document.getElementById("activityName").value;
+            var performerID = document.getElementById("performerID").value;
+            var relationship = document.getElementById("relationship").value;
+            var obsValue = document.getElementById("obsValue").value;
+
+            if (!patientID || !activityName || !performerID || !relationship || !obsValue) {
+                document.getElementById("errormsg").innerHTML = "Please fill in all the fields.";
+                return false;
+            }
+
+            if (isNaN(patientID)) {
+                document.getElementById("errormsg").innerHTML = "Patient ID must be numbers";
+                return false;
+            }
+
+            if (isNaN(obsValue) || obsValue <= 0) {
+                document.getElementById("errormsg").innerHTML = "Heart rate must be greater than 0.";
+                return false;
+            }
+
+            return true;
+        }
+
+        function postData() {
+            if (!validateInput()) {
+                return;
+            }
+
+            document.getElementById("errormsg").innerHTML = "";
+
+            jsonObj.subject.reference = "Patient/" + parseInt(document.getElementById("patientID").value);
+            jsonObj.subject.display = document.getElementById("activityName").value;
+            jsonObj.performer[0].reference = "Patient/" + document.getElementById("performerID").value;
+            jsonObj.performer[0].display = document.getElementById("relationship").value;
+            jsonObj.valueQuantity.value = parseInt(document.getElementById("obsValue").value);
+            jsonObj.effectiveDateTime = getFormattedTime();
+
+            var jsonStr = JSON.stringify(jsonObj);
+            var apiURL = "https://hapi.fhir.org/baseR4/Observation";
+            sendHttpPost(apiURL, jsonStr, callBack);
+        }
+
+        function callBack(ret) {
+            console.log(ret);
+            document.getElementById("errormsg").innerHTML = "Upload 1 data success.";
+            document.getElementById("patientID").value = "";
+            document.getElementById("activityName").value = "";
+            document.getElementById("performerID").value = "";
+            document.getElementById("relationship").value = "";
+            document.getElementById("obsValue").value = "";
+        }
+
+        function sendHttpPost(url, data, callback) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", url, true);
+            xhr.setRequestHeader("Content-Type", "application/fhir+json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 201) {
+                        callback(xhr.responseText);
+                    } else {
+                        document.getElementById("errormsg").innerHTML = "Upload failed: " + xhr.responseText;
+                    }
+                }
+            };
+            xhr.send(data);
+        }
+    </script>
+
+</head>
+
+<body style="height: 780px">
+<h1> Upload heart rate data to FHIR server</h1>
+    <p>Please enter your ID</p>
+    ID: <input type="text" id="patientID" value="44804169" /> <br />
+
+    <p>Please enter your Name</p>
+    Name: <input type="text" id="activityName" value="Mike Tyson" /> <br />
+
+    <p>Please enter Performer ID (the one who records, can be yourself)</p>
+    Performer ID: <input type="text" id="performerID" /> <br />
+
+    <p>Please enter your relationship with the performer</p>
+    Relationship: <input type="text" id="relationship" /> <br />
+
+    <p>Please enter your heart rate (beats per minute)</p>
+    Heart rate: <input type="number" id="obsValue" min="0"/> <br />
+
+    <br/>
+    <input id="Button1" onclick="postData()" type="button" value="postData" /><br />
+    <a id="errormsg" style="color: red;"></a>
+</body>
+
+</html>
